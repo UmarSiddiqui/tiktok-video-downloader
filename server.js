@@ -12,9 +12,30 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const TMP_DIR = path.join(__dirname, 'tmp');
 
-// Binaries: prefer env overrides, otherwise rely on PATH (works in Docker/Render)
-const YTDLP_BIN = process.env.YTDLP_BIN || 'yt-dlp';
-const FFMPEG_BIN = process.env.FFMPEG_BIN || 'ffmpeg';
+// Binaries:
+// - Prefer env overrides (advanced)
+// - Prefer project-local yt-dlp downloaded during install
+// - Prefer ffmpeg-static when installed
+function resolveYtdlpBin() {
+  if (process.env.YTDLP_BIN) return process.env.YTDLP_BIN;
+  const local = path.join(__dirname, 'bin', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
+  if (fs.existsSync(local)) return local;
+  return 'yt-dlp';
+}
+
+function resolveFfmpegBin() {
+  if (process.env.FFMPEG_BIN) return process.env.FFMPEG_BIN;
+  try {
+    // ffmpeg-static returns an absolute path to ffmpeg binary for the current platform
+    // eslint-disable-next-line global-require
+    const ffmpegStatic = require('ffmpeg-static');
+    if (ffmpegStatic) return ffmpegStatic;
+  } catch (_) {}
+  return 'ffmpeg';
+}
+
+const YTDLP_BIN = resolveYtdlpBin();
+const FFMPEG_BIN = resolveFfmpegBin();
 
 // Ensure tmp dir exists
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
