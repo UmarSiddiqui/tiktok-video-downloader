@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: tiktok-video-downloader
+    env: docker
+    plan: starter
+    autoDeploy: true
+    healthCheckPath: /

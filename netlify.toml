@@ -1,0 +1,13 @@
+[build]
+  publish = "public"
+
+# Proxy API calls from the static Netlify frontend to your backend.
+# After your backend is deployed (Render/Fly/etc), replace the placeholder host below.
+#
+# Example:
+#   to = "https://your-backend.onrender.com/api/:splat"
+[[redirects]]
+  from = "/api/*"
+  to = "https://REPLACE_ME_BACKEND_HOST/api/:splat"
+  status = 200
+  force = true
