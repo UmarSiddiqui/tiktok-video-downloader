@@ -5,6 +5,8 @@ const rateLimit = require('express-rate-limit');
 const ffmpeg = require('fluent-ffmpeg');
 const { randomUUID: uuidv4 } = require('crypto');
 const { execFile } = require('child_process');
+const { pipeline } = require('stream/promises');
+const { Readable } = require('stream');
 const path = require('path');
 const fs = require('fs');
 
@@ -142,6 +144,31 @@ function cleanupTmp() {
 cleanupTmp();
 setInterval(cleanupTmp, 5 * 60 * 1000);
 
+// Cobalt API fallback — free public instance, no key required.
+// Override with COBALT_API_URL to point at a self-hosted Cobalt instance.
+const COBALT_API = (process.env.COBALT_API_URL || 'https://api.cobalt.tools').replace(/\/$/, '');
+
+function isIpBlocked(stderr) {
+  return !!stderr && stderr.includes('IP address is blocked');
+}
+
+// Ask Cobalt for a download URL then stream the file to outPath.
+async function cobaltDownload(tiktokUrl, outPath) {
+  const apiResp = await fetch(`${COBALT_API}/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ url: tiktokUrl }),
+    signal: AbortSignal.timeout(15000),
+  });
+  const data = await apiResp.json();
+  if (!data.url) throw new Error(`Cobalt: ${data.error?.code || data.status || 'no download URL'}`);
+
+  const fileResp = await fetch(data.url, { signal: AbortSignal.timeout(120000) });
+  if (!fileResp.ok) throw new Error(`Cobalt stream failed: ${fileResp.status}`);
+
+  await pipeline(Readable.fromWeb(fileResp.body), fs.createWriteStream(outPath));
+}
+
 function parseYtdlpError(stderr) {
   if (!stderr) return 'Download failed.';
   if (stderr.includes('IP address is blocked')) return 'TikTok blocked this download (IP restricted). Try a VPN or a different network.';
@@ -189,6 +216,14 @@ app.post('/api/formats', async (req, res) => {
 
     res.json({ qualities, title: info.title || null });
   } catch (e) {
+    // If TikTok blocked the server's IP, fall back to Cobalt (best quality only)
+    if (isIpBlocked(e.stderr)) {
+      return res.json({
+        qualities: [{ label: 'Best quality', formatId: 'cobalt:best' }],
+        title: null,
+        via: 'cobalt',
+      });
+    }
     res.status(500).json({ error: parseYtdlpError(e.stderr) });
   }
 });
@@ -201,11 +236,27 @@ app.post('/api/download', async (req, res) => {
     return res.status(400).json({ error: 'Please provide a valid TikTok URL.' });
   }
 
-  if (formatId && !SAFE_FORMAT_RE.test(formatId)) {
+  const useCobalt = formatId === 'cobalt:best';
+
+  if (!useCobalt && formatId && !SAFE_FORMAT_RE.test(formatId)) {
     return res.status(400).json({ error: 'Invalid format selection.' });
   }
-  const fmt = formatId || BEST_FORMAT;
+
   const id = uuidv4();
+
+  // Direct Cobalt path (chosen by frontend when yt-dlp was already blocked at /api/formats)
+  if (useCobalt) {
+    const outPath = path.join(TMP_DIR, `${id}.mp4`);
+    try {
+      await cobaltDownload(url, outPath);
+      return res.json({ downloadUrl: `/api/files/${id}.mp4` });
+    } catch (err) {
+      console.error('Cobalt error:', err.message);
+      return res.status(500).json({ error: 'Download failed via fallback. The video may be private or unavailable.' });
+    }
+  }
+
+  const fmt = formatId || BEST_FORMAT;
   const outPath = path.join(TMP_DIR, `${id}.%(ext)s`);
 
   try {
@@ -215,6 +266,17 @@ app.post('/api/download', async (req, res) => {
     res.json({ downloadUrl: `/api/files/${files[0]}` });
   } catch (e) {
     console.error('yt-dlp error:', e.stderr);
+    // Cobalt fallback when yt-dlp gets IP-blocked mid-download
+    if (isIpBlocked(e.stderr)) {
+      const cobaltPath = path.join(TMP_DIR, `${id}.mp4`);
+      try {
+        await cobaltDownload(url, cobaltPath);
+        return res.json({ downloadUrl: `/api/files/${id}.mp4` });
+      } catch (cobaltErr) {
+        console.error('Cobalt fallback error:', cobaltErr.message);
+        return res.status(500).json({ error: 'Download failed via fallback. The video may be private or unavailable.' });
+      }
+    }
     res.status(500).json({ error: parseYtdlpError(e.stderr) });
   }
 });
