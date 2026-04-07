@@ -12,6 +12,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const TMP_DIR = path.join(__dirname, 'tmp');
 
+// Render/Netlify sit behind proxies; trust X-Forwarded-* headers
+app.set('trust proxy', 1);
+
 // Binaries:
 // - Prefer env overrides (advanced)
 // - Prefer project-local yt-dlp downloaded during install
