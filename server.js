@@ -109,9 +109,11 @@ const BEST_FORMAT = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+be
 // Base flags applied to every yt-dlp call:
 //   --xff US              → spoof US IP to unlock full 1080p format list from TikTok's API
 //   --extractor-args      → fallback API hostname in case the default is rate-limited
+//   --proxy               → route through a residential/SOCKS proxy to avoid cloud IP bans
 const TIKTOK_BASE_FLAGS = [
   '--xff', 'US',
   '--extractor-args', 'tiktok:api_hostname=api22-normal-c-useast2a.tiktokv.com',
+  ...(process.env.YTDLP_PROXY ? ['--proxy', process.env.YTDLP_PROXY] : []),
 ];
 
 function runYtdlp(flagArgs, url, timeoutMs = 60000) {
