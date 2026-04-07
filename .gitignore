@@ -14,3 +14,9 @@ yarn-error.log*
 .env.*
 node_modules/
 tmp/
+
+# Local Netlify folder
+.netlify
+
+# downloaded helpers (installed at runtime)
+bin/
