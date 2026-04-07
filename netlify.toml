@@ -8,6 +8,6 @@
 #   to = "https://your-backend.onrender.com/api/:splat"
 [[redirects]]
   from = "/api/*"
-  to = "https://REPLACE_ME_BACKEND_HOST/api/:splat"
+  to = "https://tiktok-video-downloader-4gsa.onrender.com/api/:splat"
   status = 200
   force = true
