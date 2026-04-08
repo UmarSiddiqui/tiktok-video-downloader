@@ -153,7 +153,7 @@ downloadBtn.addEventListener('click', async () => {
   }
 });
 
-// --- Extract Frames Tab ---
+// --- Extract Frames Tab (fully client-side — no server required) ---
 const extractBtn = document.getElementById('extract-btn');
 const videoUpload = document.getElementById('video-upload');
 const fileLabelText = document.getElementById('file-label-text');
@@ -174,6 +174,52 @@ const intervalMsInput = document.getElementById('interval-ms');
 const extractStatus = document.getElementById('extract-status');
 const framesGrid = document.getElementById('frames-grid');
 
+// Seek a video element to a given time and resolve when the frame is ready.
+function seekTo(video, timeS) {
+  return new Promise(resolve => {
+    const onSeeked = () => { video.removeEventListener('seeked', onSeeked); resolve(); };
+    video.addEventListener('seeked', onSeeked);
+    video.currentTime = timeS;
+  });
+}
+
+// Extract frames purely in the browser using <video> + <canvas>.
+function extractFramesInBrowser(file, frameCount, intervalMs) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    const blobUrl = URL.createObjectURL(file);
+
+    video.addEventListener('error', () => {
+      URL.revokeObjectURL(blobUrl);
+      reject(new Error('Could not load video file. Make sure it is a supported format.'));
+    });
+
+    video.addEventListener('loadedmetadata', async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      const frames = [];
+
+      for (let i = 0; i < frameCount; i++) {
+        const timeS = (i * intervalMs) / 1000;
+        if (timeS > video.duration) break;
+        await seekTo(video, timeS);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        frames.push(canvas.toDataURL('image/png'));
+      }
+
+      URL.revokeObjectURL(blobUrl);
+      resolve(frames);
+    });
+
+    video.src = blobUrl;
+    video.load();
+  });
+}
+
 extractBtn.addEventListener('click', async () => {
   const file = videoUpload.files[0];
   if (!file) {
@@ -181,41 +227,24 @@ extractBtn.addEventListener('click', async () => {
     return;
   }
 
-  const frameCount = parseInt(frameCountInput.value, 10) || 5;
-  const intervalMs = parseInt(intervalMsInput.value, 10) ?? 1000;
-
-  if (frameCount < 1 || frameCount > 50) {
-    showStatus(extractStatus, 'error', 'Frame count must be between 1 and 50.');
-    return;
-  }
+  const frameCount = Math.min(Math.max(parseInt(frameCountInput.value, 10) || 5, 1), 50);
+  const intervalMs = Math.max(parseInt(intervalMsInput.value, 10) || 1000, 0);
 
   extractBtn.disabled = true;
   framesGrid.classList.add('hidden');
   framesGrid.innerHTML = '';
   showStatus(extractStatus, 'loading', 'Extracting frames…', true);
 
-  const formData = new FormData();
-  formData.append('video', file);
-  formData.append('frameCount', frameCount);
-  formData.append('intervalMs', intervalMs);
-
   try {
-    const res = await fetch('/api/extract-frames', {
-      method: 'POST',
-      body: formData,
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      showStatus(extractStatus, 'error', data.error || 'Something went wrong.');
-    } else if (!data.frames || data.frames.length === 0) {
-      showStatus(extractStatus, 'error', 'No frames were extracted. Try a shorter interval.');
+    const frames = await extractFramesInBrowser(file, frameCount, intervalMs);
+    if (!frames.length) {
+      showStatus(extractStatus, 'error', 'No frames extracted — video may be shorter than the interval.');
     } else {
-      showStatus(extractStatus, 'success', `Extracted ${data.frames.length} frame${data.frames.length !== 1 ? 's' : ''}.`, false);
-      renderFrames(data.frames);
+      showStatus(extractStatus, 'success', `Extracted ${frames.length} frame${frames.length !== 1 ? 's' : ''}.`);
+      renderFrames(frames);
     }
   } catch (err) {
-    showStatus(extractStatus, 'error', 'Network error. Is the server running?');
+    showStatus(extractStatus, 'error', err.message || 'Failed to extract frames.');
   } finally {
     extractBtn.disabled = false;
   }
