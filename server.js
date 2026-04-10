@@ -229,6 +229,17 @@ app.post('/api/formats', async (req, res) => {
   }
 });
 
+// GET /api/health — basic healthcheck for frontend/proxy debugging
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true });
+});
+
+// GET /render-workflows — basic backend healthcheck at a stable path
+// (useful even when /api/* is proxied by a static host)
+app.get('/render-workflows', (_req, res) => {
+  res.json({ ok: true, service: 'tiktok-video-downloader' });
+});
+
 // POST /api/download — download TikTok video via yt-dlp
 app.post('/api/download', async (req, res) => {
   const { url, formatId } = req.body;

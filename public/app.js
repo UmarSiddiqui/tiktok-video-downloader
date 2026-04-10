@@ -115,13 +115,12 @@ downloadBtn.addEventListener('click', async () => {
     return;
   }
 
-  if (!qualitySelect.value) {
-    showStatus(downloadStatus, 'error', 'Please wait for qualities to load.');
-    return;
-  }
-
-  const formatId = qualitySelect.value;
-  const qualityLabel = qualitySelect.options[qualitySelect.selectedIndex]?.text || 'Best quality';
+  // If qualities couldn't be fetched (backend down / rate limited / blocked),
+  // still allow a best-quality download via server-side defaults.
+  const formatId = qualitySelect.value || null;
+  const qualityLabel = qualitySelect.value
+    ? (qualitySelect.options[qualitySelect.selectedIndex]?.text || 'Selected quality')
+    : 'Best quality';
 
   downloadBtn.disabled = true;
   showStatus(downloadStatus, 'loading', `Downloading ${qualityLabel}…`, true);
@@ -158,6 +157,40 @@ const extractBtn = document.getElementById('extract-btn');
 const videoUpload = document.getElementById('video-upload');
 const fileLabelText = document.getElementById('file-label-text');
 const fileDropLabel = document.getElementById('file-drop-label');
+const frameCountInput = document.getElementById('frame-count');
+const intervalMsInput = document.getElementById('interval-ms');
+const extractStatus = document.getElementById('extract-status');
+const framesGrid = document.getElementById('frames-grid');
+
+// Enable drag & drop onto the upload area.
+// Also prevent the browser from navigating away when a file is dropped.
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+  document.addEventListener(evt, (e) => e.preventDefault());
+});
+['dragenter', 'dragover'].forEach(evt => {
+  fileDropLabel.addEventListener(evt, (e) => {
+    e.preventDefault();
+    fileDropLabel.classList.add('dragging');
+  });
+});
+['dragleave', 'drop'].forEach(evt => {
+  fileDropLabel.addEventListener(evt, (e) => {
+    e.preventDefault();
+    fileDropLabel.classList.remove('dragging');
+  });
+});
+fileDropLabel.addEventListener('drop', (e) => {
+  const file = e.dataTransfer?.files?.[0];
+  if (!file) return;
+  if (!file.type || !file.type.startsWith('video/')) {
+    showStatus(extractStatus, 'error', 'Please drop a video file.');
+    return;
+  }
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  videoUpload.files = dt.files;
+  videoUpload.dispatchEvent(new Event('change', { bubbles: true }));
+});
 
 videoUpload.addEventListener('change', () => {
   const file = videoUpload.files[0];
@@ -169,10 +202,6 @@ videoUpload.addEventListener('change', () => {
     fileDropLabel.classList.remove('has-file');
   }
 });
-const frameCountInput = document.getElementById('frame-count');
-const intervalMsInput = document.getElementById('interval-ms');
-const extractStatus = document.getElementById('extract-status');
-const framesGrid = document.getElementById('frames-grid');
 
 // Seek a video element to a given time and resolve when the frame is ready.
 function seekTo(video, timeS) {

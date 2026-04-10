@@ -256,6 +256,13 @@ header { margin-bottom: 52px; }
   text-align: center;
 }
 
+.file-drop.dragging {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
 .file-drop:hover {
   border-color: var(--accent);
   background: var(--accent-dim);
