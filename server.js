@@ -214,6 +214,8 @@ const COBALT_QUALITIES_RESPONSE = Object.freeze({
 });
 
 // POST /api/formats — fetch available quality options for a URL
+// Always responds 200 with either yt-dlp-derived qualities or a Cobalt single option so the UI never
+// breaks on datacenter IP blocks, empty stderr, or flaky yt-dlp exits (common on Render).
 app.post('/api/formats', async (req, res) => {
   const { url } = req.body;
   if (!url || !TIKTOK_URL_RE.test(url)) {
@@ -231,7 +233,8 @@ app.post('/api/formats', async (req, res) => {
     try {
       info = JSON.parse(trimmed);
     } catch {
-      return res.status(500).json({ error: 'Could not parse video metadata from the downloader.' });
+      console.warn('formats: could not parse yt-dlp JSON, using Cobalt');
+      return res.json(COBALT_QUALITIES_RESPONSE);
     }
 
     // yt-dlp prints JSON `null` when a post is blocked/unavailable but still exits 0 in some cases
@@ -257,17 +260,16 @@ app.post('/api/formats', async (req, res) => {
         }
       });
 
-    res.json({ qualities, title: info.title || null });
+    return res.json({ qualities, title: info.title || null });
   } catch (e) {
-    if (isIpBlocked(e?.stderr)) {
-      return res.json(COBALT_QUALITIES_RESPONSE);
-    }
-    // yt-dlp sometimes exits non-zero with an empty stderr on cloud hosts — still offer Cobalt for /formats
-    if (!stderrText(e?.stderr)) {
-      console.warn('formats: yt-dlp failed with empty stderr', e?.err?.code, e?.err?.message, e?.message);
-      return res.json(COBALT_QUALITIES_RESPONSE);
-    }
-    res.status(500).json({ error: parseYtdlpStderr(e.stderr) });
+    const errLog = stderrText(e?.stderr).slice(0, 800);
+    console.warn(
+      'formats: yt-dlp error, using Cobalt',
+      e?.err?.code,
+      e?.err?.message || e?.message,
+      errLog || '(no stderr)',
+    );
+    return res.json(COBALT_QUALITIES_RESPONSE);
   }
 });
 
