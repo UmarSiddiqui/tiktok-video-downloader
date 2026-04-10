@@ -151,7 +151,8 @@ const COBALT_API = (process.env.COBALT_API_URL || 'https://api.cobalt.tools').re
 
 function stderrText(stderr) {
   if (stderr == null) return '';
-  return Buffer.isBuffer(stderr) ? stderr.toString('utf8') : String(stderr);
+  const raw = Buffer.isBuffer(stderr) ? stderr.toString('utf8') : String(stderr);
+  return raw.trim();
 }
 
 function isIpBlocked(stderr) {
@@ -202,6 +203,7 @@ function parseYtdlpRejection(rejection) {
     if (spawnErr.killed || spawnErr.signal === 'SIGTERM') return 'The request timed out while fetching the video.';
     if (spawnErr.message) return spawnErr.message;
   }
+  if (rejection instanceof Error && rejection.message) return rejection.message;
   return 'Download failed.';
 }
 
@@ -257,10 +259,15 @@ app.post('/api/formats', async (req, res) => {
 
     res.json({ qualities, title: info.title || null });
   } catch (e) {
-    if (isIpBlocked(e.stderr)) {
+    if (isIpBlocked(e?.stderr)) {
       return res.json(COBALT_QUALITIES_RESPONSE);
     }
-    res.status(500).json({ error: parseYtdlpRejection(e) });
+    // yt-dlp sometimes exits non-zero with an empty stderr on cloud hosts — still offer Cobalt for /formats
+    if (!stderrText(e?.stderr)) {
+      console.warn('formats: yt-dlp failed with empty stderr', e?.err?.code, e?.err?.message, e?.message);
+      return res.json(COBALT_QUALITIES_RESPONSE);
+    }
+    res.status(500).json({ error: parseYtdlpStderr(e.stderr) });
   }
 });
 
