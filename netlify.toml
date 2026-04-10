@@ -1,13 +1,17 @@
 [build]
   publish = "public"
 
-# Proxy API calls from the static Netlify frontend to your backend.
-# After your backend is deployed (Render/Fly/etc), replace the placeholder host below.
-#
-# Example:
-#   to = "https://your-backend.onrender.com/api/:splat"
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Route API calls to Netlify Functions (no more Render backend)
 [[redirects]]
-  from = "/api/*"
-  to = "https://tiktok-video-downloader-4gsa.onrender.com/api/:splat"
+  from = "/api/download"
+  to = "/.netlify/functions/download"
   status = 200
-  force = true
+
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/health"
+  status = 200

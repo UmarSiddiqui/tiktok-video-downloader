@@ -34,8 +34,6 @@ document.querySelectorAll('.tab').forEach(tab => {
 const downloadBtn = document.getElementById('download-btn');
 const urlInput = document.getElementById('tiktok-url');
 const downloadStatus = document.getElementById('download-status');
-const qualityRow = document.getElementById('quality-row');
-const qualitySelect = document.getElementById('quality-select');
 
 function showStatus(el, type, text, isLoading = false) {
   el.className = `status ${type}`;
@@ -51,62 +49,7 @@ function showStatus(el, type, text, isLoading = false) {
   el.classList.remove('hidden');
 }
 
-// Fetch available qualities when the URL field loses focus or Enter is pressed
-let lastFetchedUrl = '';
-async function loadQualities() {
-  const url = urlInput.value.trim();
-  if (!url || url === lastFetchedUrl) return;
-  lastFetchedUrl = url;
-
-  qualityRow.classList.add('hidden');
-  qualitySelect.innerHTML = '';
-  downloadStatus.classList.add('hidden');
-
-  showStatus(downloadStatus, 'loading', 'Fetching available qualities…', true);
-
-  try {
-    const res = await fetch('/api/formats', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      showStatus(downloadStatus, 'error', data.error || 'Could not fetch qualities.');
-      return;
-    }
-
-    downloadStatus.classList.add('hidden');
-    data.qualities.forEach(q => {
-      const opt = document.createElement('option');
-      opt.value = q.formatId;
-      opt.textContent = q.label;
-      qualitySelect.appendChild(opt);
-    });
-    qualityRow.classList.remove('hidden');
-  } catch (err) {
-    showStatus(downloadStatus, 'error', 'Network error. Is the server running?');
-  }
-}
-
-
-// Auto-fetch qualities when a valid TikTok URL is pasted/typed
-const TIKTOK_URL_RE = /^https?:\/\/(www\.|vm\.|vt\.)?tiktok\.com\//;
-let debounceTimer;
-urlInput.addEventListener('input', () => {
-  const url = urlInput.value.trim();
-  clearTimeout(debounceTimer);
-  if (url !== lastFetchedUrl) {
-    qualityRow.classList.add('hidden');
-    downloadStatus.classList.add('hidden');
-    lastFetchedUrl = '';
-    qualitySelect.innerHTML = '';
-  }
-  if (TIKTOK_URL_RE.test(url)) {
-    debounceTimer = setTimeout(loadQualities, 400);
-  }
-});
+const TIKTOK_URL_RE = /^https?:\/\/(www\.|vm\.|vt\.|m\.)?tiktok\.com\//;
 
 downloadBtn.addEventListener('click', async () => {
   const url = urlInput.value.trim();
@@ -114,39 +57,38 @@ downloadBtn.addEventListener('click', async () => {
     showStatus(downloadStatus, 'error', 'Please paste a TikTok URL.');
     return;
   }
-
-  // If qualities couldn't be fetched (backend down / rate limited / blocked),
-  // still allow a best-quality download via server-side defaults.
-  const formatId = qualitySelect.value || null;
-  const qualityLabel = qualitySelect.value
-    ? (qualitySelect.options[qualitySelect.selectedIndex]?.text || 'Selected quality')
-    : 'Best quality';
+  if (!TIKTOK_URL_RE.test(url)) {
+    showStatus(downloadStatus, 'error', 'That doesn\'t look like a TikTok URL.');
+    return;
+  }
 
   downloadBtn.disabled = true;
-  showStatus(downloadStatus, 'loading', `Downloading ${qualityLabel}…`, true);
+  showStatus(downloadStatus, 'loading', 'Fetching video… this may take a few seconds.', true);
 
   try {
     const res = await fetch('/api/download', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, formatId }),
+      body: JSON.stringify({ url }),
     });
     const data = await res.json();
 
     if (!res.ok) {
       showStatus(downloadStatus, 'error', data.error || 'Something went wrong.');
     } else {
-      // Auto-trigger the browser file download
+      // Open the direct download URL from Cobalt — browser handles the file download
       const a = document.createElement('a');
       a.href = data.downloadUrl;
       a.download = '';
+      a.target = '_blank';
+      a.rel = 'noopener';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       showStatus(downloadStatus, 'success', 'Download started — check your Downloads folder.');
     }
   } catch (err) {
-    showStatus(downloadStatus, 'error', 'Network error. Is the server running?');
+    showStatus(downloadStatus, 'error', 'Network error. Please try again.');
   } finally {
     downloadBtn.disabled = false;
   }

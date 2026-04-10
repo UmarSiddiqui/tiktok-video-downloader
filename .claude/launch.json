@@ -3,10 +3,9 @@
   "configurations": [
     {
       "name": "tiktok-tools",
-      "runtimeExecutable": "/Users/umarsiddiqui/.nvm/versions/node/v20.16.0/bin/node",
-      "runtimeArgs": ["server.js"],
-      "port": 3000,
-      "autoPort": false
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["netlify", "dev"],
+      "port": 8888
     }
   ]
 }
