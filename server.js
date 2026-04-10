@@ -82,6 +82,14 @@ const apiLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 
 app.use(express.json({ limit: '1mb' }));
+
+// Browsers request /favicon.ico by default; avoid noisy 404s in DevTools
+app.get('/favicon.ico', (_req, res) => {
+  res.type('image/svg+xml').send(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#f43f5e"/></svg>',
+  );
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const ALLOWED_VIDEO_MIMES = new Set([
@@ -155,10 +163,6 @@ function stderrText(stderr) {
   return raw.trim();
 }
 
-function isIpBlocked(stderr) {
-  return stderrText(stderr).includes('IP address is blocked');
-}
-
 // Ask Cobalt for a download URL then stream the file to outPath.
 async function cobaltDownload(tiktokUrl, outPath) {
   const apiResp = await fetch(`${COBALT_API}/`, {
@@ -174,37 +178,6 @@ async function cobaltDownload(tiktokUrl, outPath) {
   if (!fileResp.ok) throw new Error(`Cobalt stream failed: ${fileResp.status}`);
 
   await pipeline(Readable.fromWeb(fileResp.body), fs.createWriteStream(outPath));
-}
-
-function parseYtdlpStderr(stderr) {
-  const s = stderrText(stderr);
-  if (!s) return null;
-  if (s.includes('IP address is blocked')) return 'TikTok blocked this download (IP restricted). Try a VPN or a different network.';
-  if (s.includes('Private video')) return 'This video is private and cannot be downloaded.';
-  if (s.includes('This video is unavailable')) return 'This video is unavailable.';
-  if (s.includes('Unable to extract')) return 'Could not extract video info. The URL may be invalid or the video may have been deleted.';
-  const errorLine = s.split('\n').filter(l => l.includes('ERROR:')).pop();
-  if (errorLine) {
-    return errorLine
-      .replace(/.*ERROR:\s*\[.*?\]\s*/, '')
-      .replace(/\/[\w/.\-]+/g, '[path]')
-      .trim();
-  }
-  return 'Failed to download video. Check the URL and try again.';
-}
-
-function parseYtdlpRejection(rejection) {
-  const stderr = stderrText(rejection?.stderr);
-  const spawnErr = rejection?.err;
-  const fromStderr = parseYtdlpStderr(stderr);
-  if (fromStderr) return fromStderr;
-  if (spawnErr) {
-    if (spawnErr.code === 'ENOENT') return 'The video downloader (yt-dlp) is not available on the server.';
-    if (spawnErr.killed || spawnErr.signal === 'SIGTERM') return 'The request timed out while fetching the video.';
-    if (spawnErr.message) return spawnErr.message;
-  }
-  if (rejection instanceof Error && rejection.message) return rejection.message;
-  return 'Download failed.';
 }
 
 const COBALT_QUALITIES_RESPONSE = Object.freeze({
@@ -308,31 +281,36 @@ app.post('/api/download', async (req, res) => {
       return res.json({ downloadUrl: `/api/files/${id}.mp4` });
     } catch (err) {
       console.error('Cobalt error:', err.message);
-      return res.status(500).json({ error: 'Download failed via fallback. The video may be private or unavailable.' });
+      return res.status(500).json({
+        error:
+          'Could not download this clip. TikTok often blocks cloud servers even when the video is public. Try again later, another network, or a desktop VPN.',
+      });
     }
   }
 
   const fmt = formatId || BEST_FORMAT;
   const outPath = path.join(TMP_DIR, `${id}.%(ext)s`);
+  const cobaltOut = path.join(TMP_DIR, `${id}.mp4`);
 
   try {
     await runYtdlp(['-f', fmt, '--merge-output-format', 'mp4', '--no-playlist', '-o', outPath], url, 120000);
     const files = fs.readdirSync(TMP_DIR).filter(f => f.startsWith(id));
-    if (!files.length) return res.status(500).json({ error: 'Download failed — output file not found.' });
-    res.json({ downloadUrl: `/api/files/${files[0]}` });
-  } catch (e) {
-    console.error('yt-dlp error:', stderrText(e.stderr));
-    if (isIpBlocked(e.stderr)) {
-      const cobaltPath = path.join(TMP_DIR, `${id}.mp4`);
-      try {
-        await cobaltDownload(url, cobaltPath);
-        return res.json({ downloadUrl: `/api/files/${id}.mp4` });
-      } catch (cobaltErr) {
-        console.error('Cobalt fallback error:', cobaltErr.message);
-        return res.status(500).json({ error: 'Download failed via fallback. The video may be private or unavailable.' });
-      }
+    if (!files.length) {
+      throw new Error('yt-dlp produced no output file');
     }
-    res.status(500).json({ error: parseYtdlpRejection(e) });
+    return res.json({ downloadUrl: `/api/files/${files[0]}` });
+  } catch (e) {
+    console.error('yt-dlp download failed:', stderrText(e?.stderr).slice(0, 2000) || e?.message || e);
+    try {
+      await cobaltDownload(url, cobaltOut);
+      return res.json({ downloadUrl: `/api/files/${id}.mp4` });
+    } catch (cobaltErr) {
+      console.error('Cobalt error:', cobaltErr.message);
+      return res.status(500).json({
+        error:
+          'Could not download this clip. TikTok often blocks cloud servers even when the video is public. Try again later, another network, or a desktop VPN.',
+      });
+    }
   }
 });
 
