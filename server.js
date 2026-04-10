@@ -111,16 +111,33 @@ const upload = multer({
 
 const TIKTOK_URL_RE = /^https?:\/\/(www\.|vm\.|vt\.)?tiktok\.com\//;
 
+// Strip tracking params (free reliability: cleaner URLs parse more consistently)
+function normalizeTikTokUrl(url) {
+  try {
+    const u = new URL(String(url).trim());
+    ['_r', '_t', 'is_from_webapp', 'is_copy_url', 'sender_device', 'sender_web_id'].forEach(k =>
+      u.searchParams.delete(k),
+    );
+    u.hash = '';
+    return u.href;
+  } catch {
+    return String(url).trim();
+  }
+}
+
 // Whitelist for yt-dlp format strings — only allow safe characters
 const SAFE_FORMAT_RE = /^[a-zA-Z0-9\[\]+=<>\/.,_\-*]+$/;
 
 // Best quality format: prefer h264 mp4 with separate audio, fall back gracefully
 const BEST_FORMAT = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio/bestvideo+bestaudio/best';
 
+// Extra resilience on slow / flaky networks (no cost)
+const YTDLP_NETWORK_FLAGS = ['--retries', '5', '--fragment-retries', '15', '--extractor-retries', '5', '--socket-timeout', '30'];
+
 // Base flags applied to every yt-dlp call:
 //   --xff US              → spoof US IP to unlock full 1080p format list from TikTok's API
 //   --extractor-args      → fallback API hostname in case the default is rate-limited
-//   --proxy               → route through a residential/SOCKS proxy to avoid cloud IP bans
+//   --proxy               → optional paid/residential proxy (YTDLP_PROXY)
 const TIKTOK_BASE_FLAGS = [
   '--xff', 'US',
   '--extractor-args', 'tiktok:api_hostname=api22-normal-c-useast2a.tiktokv.com',
@@ -128,7 +145,7 @@ const TIKTOK_BASE_FLAGS = [
 ];
 
 function runYtdlp(flagArgs, url, timeoutMs = 60000) {
-  const args = [...flagArgs, ...TIKTOK_BASE_FLAGS, url];
+  const args = [...flagArgs, ...YTDLP_NETWORK_FLAGS, ...TIKTOK_BASE_FLAGS, url];
   return new Promise((resolve, reject) => {
     execFile(YTDLP_BIN, args, { timeout: timeoutMs }, (err, stdout, stderr) => {
       if (!err) return resolve({ stdout, stderr });
@@ -153,9 +170,13 @@ function cleanupTmp() {
 cleanupTmp();
 setInterval(cleanupTmp, 5 * 60 * 1000);
 
-// Cobalt API fallback — free public instance, no key required.
-// Override with COBALT_API_URL to point at a self-hosted Cobalt instance.
-const COBALT_API = (process.env.COBALT_API_URL || 'https://api.cobalt.tools').replace(/\/$/, '');
+// Cobalt API fallback — free tier: try several bases (comma-separated in COBALT_API_URLS).
+// COBALT_API_URL (single) still supported for backwards compatibility.
+const COBALT_BASES = (() => {
+  const raw = process.env.COBALT_API_URLS || process.env.COBALT_API_URL || 'https://api.cobalt.tools';
+  const parts = raw.split(',').map(s => s.trim().replace(/\/$/, '')).filter(Boolean);
+  return [...new Set(parts)];
+})();
 
 function stderrText(stderr) {
   if (stderr == null) return '';
@@ -163,21 +184,39 @@ function stderrText(stderr) {
   return raw.trim();
 }
 
-// Ask Cobalt for a download URL then stream the file to outPath.
+// Ask Cobalt for a download URL then stream the file to outPath (tries each base in COBALT_BASES).
 async function cobaltDownload(tiktokUrl, outPath) {
-  const apiResp = await fetch(`${COBALT_API}/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ url: tiktokUrl }),
-    signal: AbortSignal.timeout(15000),
-  });
-  const data = await apiResp.json();
-  if (!data.url) throw new Error(`Cobalt: ${data.error?.code || data.status || 'no download URL'}`);
+  let lastErr;
+  for (const base of COBALT_BASES) {
+    try {
+      const apiResp = await fetch(`${base}/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ url: tiktokUrl }),
+        signal: AbortSignal.timeout(22000),
+      });
+      const rawText = await apiResp.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(`Cobalt: non-JSON response (${apiResp.status})`);
+      }
+      if (!data.url) {
+        throw new Error(`Cobalt: ${data.error?.code || data.status || 'no download URL'}`);
+      }
 
-  const fileResp = await fetch(data.url, { signal: AbortSignal.timeout(120000) });
-  if (!fileResp.ok) throw new Error(`Cobalt stream failed: ${fileResp.status}`);
+      const fileResp = await fetch(data.url, { signal: AbortSignal.timeout(180000) });
+      if (!fileResp.ok) throw new Error(`Cobalt stream failed: ${fileResp.status}`);
 
-  await pipeline(Readable.fromWeb(fileResp.body), fs.createWriteStream(outPath));
+      await pipeline(Readable.fromWeb(fileResp.body), fs.createWriteStream(outPath));
+      return;
+    } catch (e) {
+      lastErr = e;
+      console.warn('cobalt endpoint failed:', base, e.message);
+    }
+  }
+  throw lastErr || new Error('Cobalt: all endpoints failed');
 }
 
 const COBALT_QUALITIES_RESPONSE = Object.freeze({
@@ -190,13 +229,13 @@ const COBALT_QUALITIES_RESPONSE = Object.freeze({
 // Always responds 200 with either yt-dlp-derived qualities or a Cobalt single option so the UI never
 // breaks on datacenter IP blocks, empty stderr, or flaky yt-dlp exits (common on Render).
 app.post('/api/formats', async (req, res) => {
-  const { url } = req.body;
+  const url = normalizeTikTokUrl(req.body?.url || '');
   if (!url || !TIKTOK_URL_RE.test(url)) {
     return res.status(400).json({ error: 'Please provide a valid TikTok URL.' });
   }
 
   try {
-    const { stdout } = await runYtdlp(['-J', '--no-playlist'], url, 30000);
+    const { stdout } = await runYtdlp(['-J', '--no-playlist'], url, 45000);
     const trimmed = (stdout || '').trim();
     if (!trimmed) {
       return res.json(COBALT_QUALITIES_RESPONSE);
@@ -246,9 +285,31 @@ app.post('/api/formats', async (req, res) => {
   }
 });
 
-// GET /api/health — basic healthcheck for frontend/proxy debugging
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true });
+function probeBinary(bin, args, timeoutMs = 12000) {
+  return new Promise(resolve => {
+    execFile(bin, args, { timeout: timeoutMs }, (err, stdout) => {
+      if (err) return resolve({ ok: false, path: bin, error: err.message });
+      const line = (stdout || '').trim().split('\n')[0] || 'unknown';
+      resolve({ ok: true, path: bin, version: line });
+    });
+  });
+}
+
+// GET /api/health — liveness + free-tier diagnostics (HTTP 200 unless process is broken)
+app.get('/api/health', async (_req, res) => {
+  const ytdlp = await probeBinary(YTDLP_BIN, ['--version']);
+  const ffmpeg = await probeBinary(FFMPEG_BIN, ['-version']);
+  const ready = ytdlp.ok && ffmpeg.ok;
+  res.json({
+    ok: true,
+    ready,
+    ytdlp,
+    ffmpeg,
+    cobaltEndpoints: COBALT_BASES.length,
+    hint: ready
+      ? 'Free tier: TikTok may still block datacenter IPs; Cobalt multi-endpoint + retries help.'
+      : 'yt-dlp or ffmpeg not executable — check build logs and bin/ path.',
+  });
 });
 
 // GET /render-workflows — basic backend healthcheck at a stable path
@@ -259,7 +320,8 @@ app.get('/render-workflows', (_req, res) => {
 
 // POST /api/download — download TikTok video via yt-dlp
 app.post('/api/download', async (req, res) => {
-  const { url, formatId } = req.body;
+  const url = normalizeTikTokUrl(req.body?.url || '');
+  const { formatId } = req.body;
 
   if (!url || !TIKTOK_URL_RE.test(url)) {
     return res.status(400).json({ error: 'Please provide a valid TikTok URL.' });
@@ -293,7 +355,7 @@ app.post('/api/download', async (req, res) => {
   const cobaltOut = path.join(TMP_DIR, `${id}.mp4`);
 
   try {
-    await runYtdlp(['-f', fmt, '--merge-output-format', 'mp4', '--no-playlist', '-o', outPath], url, 120000);
+    await runYtdlp(['-f', fmt, '--merge-output-format', 'mp4', '--no-playlist', '-o', outPath], url, 180000);
     const files = fs.readdirSync(TMP_DIR).filter(f => f.startsWith(id));
     if (!files.length) {
       throw new Error('yt-dlp produced no output file');

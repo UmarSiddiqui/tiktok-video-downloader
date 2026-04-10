@@ -143,6 +143,15 @@ header { margin-bottom: 52px; }
   font-weight: 400;
 }
 
+.hero-note {
+  margin-top: 12px;
+  max-width: 36rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-2);
+  opacity: 0.9;
+}
+
 /* ── Tabs ── */
 .tabs {
   display: flex;
