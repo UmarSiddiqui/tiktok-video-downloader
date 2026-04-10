@@ -149,8 +149,13 @@ setInterval(cleanupTmp, 5 * 60 * 1000);
 // Override with COBALT_API_URL to point at a self-hosted Cobalt instance.
 const COBALT_API = (process.env.COBALT_API_URL || 'https://api.cobalt.tools').replace(/\/$/, '');
 
+function stderrText(stderr) {
+  if (stderr == null) return '';
+  return Buffer.isBuffer(stderr) ? stderr.toString('utf8') : String(stderr);
+}
+
 function isIpBlocked(stderr) {
-  return !!stderr && stderr.includes('IP address is blocked');
+  return stderrText(stderr).includes('IP address is blocked');
 }
 
 // Ask Cobalt for a download URL then stream the file to outPath.
@@ -170,22 +175,41 @@ async function cobaltDownload(tiktokUrl, outPath) {
   await pipeline(Readable.fromWeb(fileResp.body), fs.createWriteStream(outPath));
 }
 
-function parseYtdlpError(stderr) {
-  if (!stderr) return 'Download failed.';
-  if (stderr.includes('IP address is blocked')) return 'TikTok blocked this download (IP restricted). Try a VPN or a different network.';
-  if (stderr.includes('Private video')) return 'This video is private and cannot be downloaded.';
-  if (stderr.includes('This video is unavailable')) return 'This video is unavailable.';
-  if (stderr.includes('Unable to extract')) return 'Could not extract video info. The URL may be invalid or the video may have been deleted.';
-  // Surface the last ERROR line from yt-dlp output, stripped of paths
-  const errorLine = stderr.split('\n').filter(l => l.includes('ERROR:')).pop();
+function parseYtdlpStderr(stderr) {
+  const s = stderrText(stderr);
+  if (!s) return null;
+  if (s.includes('IP address is blocked')) return 'TikTok blocked this download (IP restricted). Try a VPN or a different network.';
+  if (s.includes('Private video')) return 'This video is private and cannot be downloaded.';
+  if (s.includes('This video is unavailable')) return 'This video is unavailable.';
+  if (s.includes('Unable to extract')) return 'Could not extract video info. The URL may be invalid or the video may have been deleted.';
+  const errorLine = s.split('\n').filter(l => l.includes('ERROR:')).pop();
   if (errorLine) {
     return errorLine
       .replace(/.*ERROR:\s*\[.*?\]\s*/, '')
-      .replace(/\/[\w/.\-]+/g, '[path]')  // strip filesystem paths
+      .replace(/\/[\w/.\-]+/g, '[path]')
       .trim();
   }
   return 'Failed to download video. Check the URL and try again.';
 }
+
+function parseYtdlpRejection(rejection) {
+  const stderr = stderrText(rejection?.stderr);
+  const spawnErr = rejection?.err;
+  const fromStderr = parseYtdlpStderr(stderr);
+  if (fromStderr) return fromStderr;
+  if (spawnErr) {
+    if (spawnErr.code === 'ENOENT') return 'The video downloader (yt-dlp) is not available on the server.';
+    if (spawnErr.killed || spawnErr.signal === 'SIGTERM') return 'The request timed out while fetching the video.';
+    if (spawnErr.message) return spawnErr.message;
+  }
+  return 'Download failed.';
+}
+
+const COBALT_QUALITIES_RESPONSE = Object.freeze({
+  qualities: [{ label: 'Best quality', formatId: 'cobalt:best' }],
+  title: null,
+  via: 'cobalt',
+});
 
 // POST /api/formats — fetch available quality options for a URL
 app.post('/api/formats', async (req, res) => {
@@ -196,7 +220,23 @@ app.post('/api/formats', async (req, res) => {
 
   try {
     const { stdout } = await runYtdlp(['-J', '--no-playlist'], url, 30000);
-    const info = JSON.parse(stdout);
+    const trimmed = (stdout || '').trim();
+    if (!trimmed) {
+      return res.json(COBALT_QUALITIES_RESPONSE);
+    }
+
+    let info;
+    try {
+      info = JSON.parse(trimmed);
+    } catch {
+      return res.status(500).json({ error: 'Could not parse video metadata from the downloader.' });
+    }
+
+    // yt-dlp prints JSON `null` when a post is blocked/unavailable but still exits 0 in some cases
+    if (info == null || typeof info !== 'object') {
+      return res.json(COBALT_QUALITIES_RESPONSE);
+    }
+
     const formats = info.formats || [];
 
     const seen = new Set();
@@ -217,15 +257,10 @@ app.post('/api/formats', async (req, res) => {
 
     res.json({ qualities, title: info.title || null });
   } catch (e) {
-    // If TikTok blocked the server's IP, fall back to Cobalt (best quality only)
     if (isIpBlocked(e.stderr)) {
-      return res.json({
-        qualities: [{ label: 'Best quality', formatId: 'cobalt:best' }],
-        title: null,
-        via: 'cobalt',
-      });
+      return res.json(COBALT_QUALITIES_RESPONSE);
     }
-    res.status(500).json({ error: parseYtdlpError(e.stderr) });
+    res.status(500).json({ error: parseYtdlpRejection(e) });
   }
 });
 
@@ -277,8 +312,7 @@ app.post('/api/download', async (req, res) => {
     if (!files.length) return res.status(500).json({ error: 'Download failed — output file not found.' });
     res.json({ downloadUrl: `/api/files/${files[0]}` });
   } catch (e) {
-    console.error('yt-dlp error:', e.stderr);
-    // Cobalt fallback when yt-dlp gets IP-blocked mid-download
+    console.error('yt-dlp error:', stderrText(e.stderr));
     if (isIpBlocked(e.stderr)) {
       const cobaltPath = path.join(TMP_DIR, `${id}.mp4`);
       try {
@@ -289,7 +323,7 @@ app.post('/api/download', async (req, res) => {
         return res.status(500).json({ error: 'Download failed via fallback. The video may be private or unavailable.' });
       }
     }
-    res.status(500).json({ error: parseYtdlpError(e.stderr) });
+    res.status(500).json({ error: parseYtdlpRejection(e) });
   }
 });
 
