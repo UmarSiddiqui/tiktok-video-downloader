@@ -73,14 +73,133 @@ body {
   z-index: 1;
 }
 
+/* ── Bookmark Banner ── */
+.bookmark-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: linear-gradient(90deg, var(--accent) 0%, #ff6b8a 100%);
+  color: white;
+  padding: 12px 20px;
+  box-shadow: 0 2px 12px rgba(254,44,85,0.3);
+  animation: slideDown 0.4s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.bookmark-content {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 0.95rem;
+}
+
+.bookmark-icon {
+  font-size: 1.2rem;
+  animation: bounce 1.5s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.bookmark-dismiss {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bookmark-dismiss:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Adjust body padding when banner is visible */
+body:has(.bookmark-banner:not(.hidden)) {
+  padding-top: 100px;
+}
+
 /* ── Header ── */
 header { margin-bottom: 52px; }
 
-.header-top {
+.brand-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 40px;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-mark {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--accent) 0%, #ff6b8a 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(254,44,85,0.35);
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% { box-shadow: 0 4px 15px rgba(254,44,85,0.35); }
+  50% { box-shadow: 0 6px 25px rgba(254,44,85,0.5); }
+}
+
+.logo-letter {
+  font-family: 'Archivo', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-family: 'Archivo', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1;
+  margin: 0;
+}
+
+.brand-tagline {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 2px;
 }
 
 .wordmark {
@@ -121,6 +240,16 @@ header { margin-bottom: 52px; }
 #theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ── Hero ── */
+.hero h2 {
+  font-family: 'Archivo', sans-serif;
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
 .hero h1 {
   font-family: 'Archivo', sans-serif;
   font-size: clamp(2rem, 5vw, 2.75rem);
@@ -700,6 +829,184 @@ html {
   left: 20%;
 }
 
+/* ── Tips Card ── */
+.tips-card {
+  margin-top: 20px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.tips-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tips-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tips-list li {
+  font-size: 0.85rem;
+  color: var(--text-2);
+  line-height: 1.5;
+  padding-left: 4px;
+}
+
+/* ── Viral Section ── */
+.viral-section {
+  margin-top: 40px;
+}
+
+.viral-card {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  padding: 28px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.viral-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent) 0%, #ff6b8a 50%, var(--accent) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.viral-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.viral-emoji {
+  font-size: 1.5rem;
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.viral-header h3 {
+  font-family: 'Archivo', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.viral-text {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.share-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.share-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.share-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.share-btn:active {
+  transform: scale(0.95);
+}
+
+.share-btn.twitter {
+  background: #000;
+  color: #fff;
+}
+
+.share-btn.facebook {
+  background: #1877F2;
+  color: #fff;
+}
+
+.share-btn.linkedin {
+  background: #0A66C2;
+  color: #fff;
+}
+
+.share-btn.copy {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+
+.share-btn.copy:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.bookmark-reminder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-strong);
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+
+.bookmark-icon-small {
+  font-size: 1rem;
+}
+
+.bookmark-reminder strong {
+  color: var(--accent);
+}
+
 /* ── Legal Footer ── */
 .legal-footer {
   margin-top: 60px;
@@ -776,9 +1083,32 @@ html {
 /* ── Responsive ── */
 @media (max-width: 480px) {
   body { padding: 32px 16px 80px; }
-  .hero h1 { font-size: 1.75rem; }
+  .hero h1, .hero h2 { font-size: 1.6rem; }
   .card { padding: 22px 18px; }
   .frames-grid { grid-template-columns: repeat(2, 1fr); }
   .field-row { grid-template-columns: 1fr; gap: 0; }
   .tab { font-size: 0.8rem; padding: 8px 10px; gap: 5px; }
+
+  .brand-name { font-size: 1.3rem; }
+  .logo-mark { width: 40px; height: 40px; }
+  .logo-letter { font-size: 1.2rem; }
+
+  .bookmark-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .share-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .share-btn {
+    justify-content: center;
+  }
+
+  .tips-card { padding: 16px 20px; }
+  .viral-card { padding: 22px 18px; }
 }

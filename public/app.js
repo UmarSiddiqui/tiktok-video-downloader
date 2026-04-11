@@ -168,7 +168,7 @@ downloadBtn.addEventListener('click', async () => {
         // Clean up object URL after a delay
         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 
-        showDownloadSuccessWithExtract();
+        showDownloadSuccessWithShare();
       } catch (fetchErr) {
         // Fallback: open in new tab
         const a = document.createElement('a');
@@ -387,4 +387,110 @@ function renderFrames(urls) {
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('tab') === 'extract') {
   switchTab('extract');
+}
+
+// --- Bookmark Banner ---
+const bookmarkBanner = document.getElementById('bookmark-banner');
+const bookmarkDismiss = document.getElementById('bookmark-dismiss');
+
+function showBookmarkBanner() {
+  // Show after a delay on first visit
+  const hasSeenBanner = localStorage.getItem('umazen-bookmark-banner');
+  if (!hasSeenBanner) {
+    setTimeout(() => {
+      bookmarkBanner.classList.remove('hidden');
+    }, 2000);
+  }
+}
+
+bookmarkDismiss.addEventListener('click', () => {
+  bookmarkBanner.classList.add('hidden');
+  localStorage.setItem('umazen-bookmark-banner', 'dismissed');
+});
+
+// Show banner on load
+showBookmarkBanner();
+
+// --- Share Functionality ---
+const shareButtons = document.querySelectorAll('.share-btn');
+const currentUrl = window.location.origin + window.location.pathname;
+const shareText = 'Check out Umazen TikTok Tools - free video downloader with no watermarks!';
+
+shareButtons.forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const platform = btn.dataset.platform;
+
+    switch (platform) {
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(currentUrl)}`, '_blank', 'width=600,height=400');
+        break;
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`, '_blank', 'width=600,height=400');
+        break;
+      case 'linkedin':
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`, '_blank', 'width=600,height=400');
+        break;
+      case 'copy':
+        try {
+          await navigator.clipboard.writeText(currentUrl);
+          const copyText = document.getElementById('copy-text');
+          const originalText = copyText.textContent;
+          copyText.textContent = 'Copied!';
+          btn.style.background = 'var(--accent)';
+          btn.style.color = '#fff';
+          setTimeout(() => {
+            copyText.textContent = originalText;
+            btn.style.background = '';
+            btn.style.color = '';
+          }, 2000);
+        } catch (err) {
+          showStatus(downloadStatus, 'error', 'Failed to copy link. Please copy manually.');
+        }
+        break;
+    }
+  });
+});
+
+// --- Download Success with Share Prompt ---
+function showDownloadSuccessWithShare() {
+  downloadStatus.className = 'status success';
+  downloadStatus.innerHTML = '';
+
+  const message = document.createElement('div');
+  message.innerHTML = '<strong>✓ Download complete!</strong><br>Video saved to your Downloads folder.';
+  downloadStatus.appendChild(message);
+
+  const sharePrompt = document.createElement('div');
+  sharePrompt.style.marginTop = '16px';
+  sharePrompt.style.fontSize = '14px';
+  sharePrompt.style.color = 'var(--text-2)';
+  sharePrompt.innerHTML = '🎉 Love this tool? <strong style="color: var(--accent);">Share it with friends!</strong>';
+  downloadStatus.appendChild(sharePrompt);
+
+  const promptText = document.createElement('div');
+  promptText.style.marginTop = '12px';
+  promptText.style.fontSize = '14px';
+  promptText.style.opacity = '0.9';
+  promptText.innerHTML = 'Ready to extract frames from this video?';
+  downloadStatus.appendChild(promptText);
+
+  const btn = document.createElement('button');
+  btn.className = 'btn-primary';
+  btn.style.marginTop = '12px';
+  btn.style.padding = '10px 20px';
+  btn.style.fontSize = '15px';
+  btn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <line x1="3" y1="9" x2="21" y2="9"/>
+      <line x1="9" y1="21" x2="9" y2="9"/>
+    </svg>
+    Extract Frames Automatically`;
+  btn.addEventListener('click', () => {
+    switchTab('extract');
+    setTimeout(() => loadDownloadedVideoIntoExtract(), 200);
+  });
+  downloadStatus.appendChild(btn);
+
+  downloadStatus.classList.remove('hidden');
 }
