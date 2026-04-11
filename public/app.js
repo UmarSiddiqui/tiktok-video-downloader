@@ -49,7 +49,7 @@ function showStatus(el, type, text, isLoading = false) {
   el.classList.remove('hidden');
 }
 
-function showDownloadSuccessWithPrompt(data) {
+function showDownloadSuccessWithPrompt() {
   downloadStatus.className = 'status success';
   downloadStatus.textContent = '';
 
@@ -57,27 +57,15 @@ function showDownloadSuccessWithPrompt(data) {
   message.innerHTML = '<strong>Download started!</strong><br>Check your Downloads folder.';
   downloadStatus.appendChild(message);
 
-  // AI Analysis button
-  const aiBtn = document.createElement('button');
-  aiBtn.className = 'btn-primary';
-  aiBtn.style.marginTop = '12px';
-  aiBtn.style.padding = '8px 16px';
-  aiBtn.style.fontSize = '14px';
-  aiBtn.style.background = 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)';
-  aiBtn.innerHTML = '🤖 AI Analysis';
-  aiBtn.addEventListener('click', () => analyzeVideoWithAI(data));
-  downloadStatus.appendChild(aiBtn);
-
   const promptText = document.createElement('div');
-  promptText.style.marginTop = '16px';
+  promptText.style.marginTop = '12px';
   promptText.style.fontSize = '14px';
-  promptText.style.opacity = '0.8';
-  promptText.textContent = 'Or extract frames from the video?';
+  promptText.textContent = 'Want to extract frames from the video?';
   downloadStatus.appendChild(promptText);
 
   const btn = document.createElement('button');
   btn.className = 'btn-primary';
-  btn.style.marginTop = '8px';
+  btn.style.marginTop = '10px';
   btn.style.padding = '8px 16px';
   btn.style.fontSize = '14px';
   btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>Extract Frames';
@@ -95,86 +83,7 @@ function showDownloadSuccessWithPrompt(data) {
   downloadStatus.classList.remove('hidden');
 }
 
-// AI Analysis function
-async function analyzeVideoWithAI(videoData) {
-  showStatus(downloadStatus, 'loading', '🤖 AI is analyzing the video…', true);
-
-  try {
-    const res = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        videoUrl: videoData.downloadUrl,
-        videoData: { title: videoData.title }
-      }),
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      showStatus(downloadStatus, 'error', data.error || 'AI analysis failed.');
-      return;
-    }
-
-    // Show AI analysis results
-    downloadStatus.className = 'status success';
-    downloadStatus.textContent = '';
-
-    const title = document.createElement('div');
-    title.innerHTML = '<strong>🤖 AI Analysis Results</strong>';
-    title.style.marginBottom = '12px';
-    downloadStatus.appendChild(title);
-
-    if (data.description) {
-      const desc = document.createElement('div');
-      desc.style.marginBottom = '10px';
-      desc.innerHTML = `<strong>Description:</strong> ${escapeHtml(data.description)}`;
-      downloadStatus.appendChild(desc);
-    }
-
-    if (data.category) {
-      const cat = document.createElement('div');
-      cat.style.marginBottom = '10px';
-      cat.innerHTML = `<strong>Category:</strong> ${escapeHtml(data.category)}`;
-      downloadStatus.appendChild(cat);
-    }
-
-    if (data.hashtags && data.hashtags.length) {
-      const tags = document.createElement('div');
-      tags.style.marginBottom = '10px';
-      tags.innerHTML = `<strong>Suggested Hashtags:</strong> ${data.hashtags.join(' ')}`;
-      downloadStatus.appendChild(tags);
-    }
-
-    // Copy button
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'btn-primary';
-    copyBtn.style.marginTop = '12px';
-    copyBtn.style.padding = '8px 16px';
-    copyBtn.style.fontSize = '14px';
-    copyBtn.textContent = '📋 Copy Analysis';
-    copyBtn.addEventListener('click', () => {
-      const text = `Description: ${data.description || ''}\nCategory: ${data.category || ''}\nHashtags: ${data.hashtags?.join(' ') || ''}`;
-      navigator.clipboard.writeText(text);
-      copyBtn.textContent = '✅ Copied!';
-      setTimeout(() => copyBtn.textContent = '📋 Copy Analysis', 2000);
-    });
-    downloadStatus.appendChild(copyBtn);
-
-  } catch (err) {
-    showStatus(downloadStatus, 'error', 'AI analysis failed. Please try again.');
-  }
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 const TIKTOK_URL_RE = /^https?:\/\/(www\.|vm\.|vt\.|m\.)?tiktok\.com\//;
-
-// Store last downloaded video data for AI analysis
-let lastVideoData = null;
 
 downloadBtn.addEventListener('click', async () => {
   const url = urlInput.value.trim();
@@ -201,8 +110,6 @@ downloadBtn.addEventListener('click', async () => {
     if (!res.ok) {
       showStatus(downloadStatus, 'error', data.error || 'Something went wrong.');
     } else {
-      // Store for AI analysis
-      lastVideoData = data;
       // Fetch the video and force download via blob (avoids browser preview)
       showStatus(downloadStatus, 'loading', 'Downloading video…', true);
       try {
@@ -217,7 +124,7 @@ downloadBtn.addEventListener('click', async () => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
-        showDownloadSuccessWithPrompt(data);
+        showDownloadSuccessWithPrompt();
       } catch (fetchErr) {
         // Fallback: open in new tab if CORS blocks the fetch
         const a = document.createElement('a');
@@ -227,7 +134,7 @@ downloadBtn.addEventListener('click', async () => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        showDownloadSuccessWithPrompt(data);
+        showDownloadSuccessWithPrompt();
       }
     }
   } catch (err) {

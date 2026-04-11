@@ -16,7 +16,3 @@
   to = "/.netlify/functions/health"
   status = 200
 
-[[redirects]]
-  from = "/api/analyze"
-  to = "/.netlify/functions/analyze"
-  status = 200
