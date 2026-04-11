@@ -20,3 +20,4 @@ tmp/
 
 # downloaded helpers (installed at runtime)
 bin/
+.env
