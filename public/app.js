@@ -76,16 +76,32 @@ downloadBtn.addEventListener('click', async () => {
     if (!res.ok) {
       showStatus(downloadStatus, 'error', data.error || 'Something went wrong.');
     } else {
-      // Open the direct download URL from Cobalt — browser handles the file download
-      const a = document.createElement('a');
-      a.href = data.downloadUrl;
-      a.download = '';
-      a.target = '_blank';
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      showStatus(downloadStatus, 'success', 'Download started — check your Downloads folder.');
+      // Fetch the video and force download via blob (avoids browser preview)
+      showStatus(downloadStatus, 'loading', 'Downloading video…', true);
+      try {
+        const videoRes = await fetch(data.downloadUrl, { referrerPolicy: 'no-referrer' });
+        if (!videoRes.ok) throw new Error('Failed to fetch video');
+        const blob = await videoRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `${data.title || 'tiktok-video'}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+        showStatus(downloadStatus, 'success', 'Download started — check your Downloads folder.');
+      } catch (fetchErr) {
+        // Fallback: open in new tab if CORS blocks the fetch
+        const a = document.createElement('a');
+        a.href = data.downloadUrl;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showStatus(downloadStatus, 'success', 'Opened in new tab — right-click to save.');
+      }
     }
   } catch (err) {
     showStatus(downloadStatus, 'error', 'Network error. Please try again.');
