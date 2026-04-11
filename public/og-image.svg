@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Umazen TikTok Video Downloader</title>
+  <desc id="desc">Download TikTok videos without watermark and extract frames.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#181818"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fe2c55"/>
+      <stop offset="100%" stop-color="#ff6b8a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="970" cy="130" r="210" fill="#ffffff" fill-opacity="0.04"/>
+  <rect x="90" y="120" width="170" height="170" rx="34" fill="url(#accent)"/>
+  <text x="175" y="228" text-anchor="middle" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="96" font-weight="700">U</text>
+  <text x="310" y="205" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="66" font-weight="700">Umazen</text>
+  <text x="310" y="275" fill="#ff8fa6" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="600">TikTok Tools</text>
+  <text x="90" y="410" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="700">TikTok Video Downloader</text>
+  <text x="90" y="478" fill="#d4d4d4" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="500">No watermark • High quality • Free frame extraction</text>
+  <rect x="90" y="525" width="420" height="56" rx="28" fill="#ffffff" fill-opacity="0.08"/>
+  <text x="120" y="562" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="500">umazen.tools</text>
+</svg>

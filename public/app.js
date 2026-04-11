@@ -20,59 +20,6 @@ themeToggle.addEventListener('click', () => {
   localStorage.setItem('theme', dark ? 'dark' : 'light');
 });
 
-// Remove ad containers when AdSense does not inject a filled ad.
-function initAdContainers() {
-  const adContainers = document.querySelectorAll('.ad-container');
-  if (!adContainers.length) return;
-
-  adContainers.forEach((container) => {
-    const adSlot = container.querySelector('ins.adsbygoogle');
-    if (!adSlot) {
-      container.remove();
-      return;
-    }
-
-    const isFilled = () => adSlot.getAttribute('data-ad-status') === 'filled';
-    const isUnfilled = () => adSlot.getAttribute('data-ad-status') === 'unfilled';
-    const removeContainer = () => {
-      if (container.isConnected) container.remove();
-    };
-
-    if (isFilled()) return;
-    if (isUnfilled()) {
-      removeContainer();
-      return;
-    }
-
-    const observer = new MutationObserver(() => {
-      if (isFilled()) {
-        observer.disconnect();
-        return;
-      }
-      if (isUnfilled()) {
-        observer.disconnect();
-        removeContainer();
-      }
-    });
-
-    observer.observe(adSlot, {
-      attributes: true,
-      attributeFilter: ['data-ad-status'],
-      childList: true,
-      subtree: true,
-    });
-
-    // If AdSense still hasn't marked this slot as filled, remove the gap.
-    setTimeout(() => {
-      if (isFilled()) return;
-      observer.disconnect();
-      removeContainer();
-    }, 5000);
-  });
-}
-
-initAdContainers();
-
 // --- Shared State ---
 let downloadedVideoBlob = null;
 let downloadedVideoName = null;

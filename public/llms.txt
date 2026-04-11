@@ -1,0 +1,27 @@
+# Umazen TikTok Tools
+
+> Free web app to download TikTok videos (no watermark where available) and extract still frames.
+
+## Canonical URLs
+- https://umazen.tools/
+- https://umazen.tools/terms.html
+- https://umazen.tools/llms-full.txt
+
+## Product Summary
+Umazen TikTok Tools is a browser-based utility for:
+- Downloading public TikTok videos in best available quality
+- Extracting PNG frames from uploaded videos with custom frame count and interval
+
+## Usage Guidelines
+- Intended for educational and personal use
+- Users must follow creator rights, local law, and TikTok Terms
+- Tool is not affiliated with TikTok or ByteDance
+
+## Core Features
+- No-signup TikTok downloader
+- High-quality output preference
+- In-browser frame extraction
+- Mobile and desktop compatible UI
+
+## Support
+- Terms: https://umazen.tools/terms.html

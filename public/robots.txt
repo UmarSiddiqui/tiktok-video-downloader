@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Block API and runtime temp endpoints from indexing
+Disallow: /api/
+Disallow: /tmp/
+
+Sitemap: https://umazen.tools/sitemap.xml
