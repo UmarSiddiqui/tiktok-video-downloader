@@ -1007,6 +1007,23 @@ html {
   color: var(--accent);
 }
 
+/* ── Ad Containers ── */
+.ad-container {
+  margin: 20px auto;
+  text-align: center;
+  min-height: 90px;
+}
+
+.ad-container ins.adsbygoogle {
+  display: block;
+  margin: 0 auto;
+}
+
+.ad-footer {
+  margin-top: 30px;
+  margin-bottom: 20px;
+}
+
 /* ── Buy Me a Coffee Section ── */
 .bmc-section {
   margin-top: 24px;
