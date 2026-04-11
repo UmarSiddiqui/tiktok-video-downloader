@@ -23,14 +23,15 @@ exports.handler = async (event) => {
   const { videoUrl, videoData } = body;
 
   try {
-    // For now, we'll analyze using a frame-based approach
-    // NVIDIA's API works best with images, so we'll describe what the video is about
-    // based on metadata or use a vision model if we can get a frame
-
     const analysis = await analyzeWithNVIDIA(videoUrl, videoData, apiKey);
     return json(200, analysis);
   } catch (e) {
     console.error('AI analysis failed:', e.message);
+    if (e.name === 'AbortError' || e.message?.includes('timeout')) {
+      return json(504, {
+        error: 'AI analysis timed out. The service may be busy. Please try again.',
+      });
+    }
     return json(502, {
       error: 'AI analysis failed. Please try again.',
     });
@@ -39,13 +40,15 @@ exports.handler = async (event) => {
 
 async function analyzeWithNVIDIA(videoUrl, videoData, apiKey) {
   // Using NVIDIA's LLM API for content analysis
-  // You can use models like: meta/llama-3.1-405b-instruct, meta/llama-3.3-70b-instruct, etc.
+  // Using smaller/faster model to stay within Netlify's 10s timeout
 
   const nvidiApiUrl = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
-  const prompt = videoData?.title
-    ? `Analyze this TikTok video titled "${videoData.title}". Provide a brief description of what the video likely contains, suggest 3-5 relevant hashtags, and categorize the content (e.g., Comedy, Dance, Educational, Gaming, etc.). Keep it concise.`
-    : `Analyze a TikTok video from URL: ${videoUrl}. Provide a brief description of what the video likely contains, suggest 3-5 relevant hashtags, and categorize the content. Keep it concise.`;
+  // Build a concise prompt
+  const title = videoData?.title || '';
+  const prompt = title
+    ? `TikTok video: "${title}". Give me: 1) Brief description 2) Category 3) 3-5 hashtags. Be concise.`
+    : `TikTok video. Give me: 1) Brief description 2) Category 3) 3-5 hashtags. Be concise.`;
 
   const response = await fetch(nvidiApiUrl, {
     method: 'POST',
@@ -54,23 +57,23 @@ async function analyzeWithNVIDIA(videoUrl, videoData, apiKey) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'meta/llama-3.1-405b-instruct',
+      model: 'meta/llama-3.3-70b-instruct', // Smaller, faster model
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful AI assistant that analyzes TikTok videos. Provide concise, accurate descriptions and relevant hashtags.'
+          content: 'You analyze TikTok videos. Respond with description, category, and hashtags only. Keep under 100 words.'
         },
         {
           role: 'user',
           content: prompt
         }
       ],
-      temperature: 0.7,
-      top_p: 0.9,
-      max_tokens: 300,
+      temperature: 0.5,
+      top_p: 0.7,
+      max_tokens: 150,
       stream: false
     }),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(8_000), // Stay under Netlify's 10s limit
   });
 
   if (!response.ok) {
