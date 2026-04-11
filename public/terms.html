@@ -16,11 +16,11 @@
   <meta name="twitter:title" content="Terms of Service & Disclaimer - Umazen TikTok Tools" />
   <meta name="twitter:description" content="Legal terms and policy for using Umazen TikTok Tools." />
   <meta name="twitter:image" content="https://umazen.tools/og-image.svg" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23fe2c55'/><text x='16' y='22' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold' font-size='14'>U</text></svg>" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23fe2c55'/><stop offset='100%25' stop-color='%2300e5ff'/></linearGradient></defs><rect width='32' height='32' rx='6' fill='url(%23g)'/><text x='16' y='22' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold' font-size='14'>U</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600&display=optional" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600&display=optional" rel="stylesheet" /></noscript>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" /></noscript>
   <link rel="stylesheet" href="style.css" />
   <style>
     .terms-container {
@@ -33,7 +33,7 @@
       margin-bottom: 48px;
     }
     .terms-header h1 {
-      font-family: 'Archivo', sans-serif;
+      font-family: 'Syne', sans-serif;
       font-size: 2.2rem;
       font-weight: 800;
       margin-bottom: 12px;
@@ -45,14 +45,16 @@
     }
     .terms-section {
       background: var(--surface);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-radius: var(--radius-lg);
       border: 1px solid var(--border);
       padding: 32px;
       margin-bottom: 24px;
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--shadow-md), var(--shadow-glow);
     }
     .terms-section h2 {
-      font-family: 'Archivo', sans-serif;
+      font-family: 'Syne', sans-serif;
       font-size: 1.3rem;
       font-weight: 700;
       margin-bottom: 16px;
@@ -130,6 +132,11 @@
   </style>
 </head>
 <body>
+  <div class="bg-mesh" aria-hidden="true">
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+  </div>
   <div class="noise"></div>
 
   <main class="terms-container" id="main-content">
