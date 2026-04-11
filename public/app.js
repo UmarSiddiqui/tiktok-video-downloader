@@ -20,15 +20,47 @@ themeToggle.addEventListener('click', () => {
   localStorage.setItem('theme', dark ? 'dark' : 'light');
 });
 
-// Tab switching
+// --- Shared State ---
+let downloadedVideoBlob = null;
+let downloadedVideoName = null;
+
+// Tab switching with smooth animation
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
-    tab.classList.add('active');
-    document.getElementById(`tab-${tab.dataset.tab}`).classList.remove('hidden');
+    switchTab(tab.dataset.tab);
   });
 });
+
+function switchTab(tabName) {
+  const currentTab = document.querySelector('.tab.active');
+  const currentTabName = currentTab?.dataset.tab;
+
+  if (currentTabName === tabName) return;
+
+  // Animate out current content
+  const currentContent = document.getElementById(`tab-${currentTabName}`);
+  if (currentContent) {
+    currentContent.style.opacity = '0';
+    currentContent.style.transform = 'translateY(-10px)';
+  }
+
+  setTimeout(() => {
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
+    document.querySelectorAll('.tab-content').forEach(s => {
+      s.classList.add('hidden');
+      s.style.opacity = '';
+      s.style.transform = '';
+    });
+
+    const newTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+    newTab.classList.add('active');
+    newTab.setAttribute('aria-selected', 'true');
+    document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+  }, 150);
+}
 
 // --- Download Tab ---
 const downloadBtn = document.getElementById('download-btn');
@@ -37,7 +69,7 @@ const downloadStatus = document.getElementById('download-status');
 
 function showStatus(el, type, text, isLoading = false) {
   el.className = `status ${type}`;
-  el.textContent = '';
+  el.innerHTML = '';
   if (isLoading) {
     const spinner = document.createElement('div');
     spinner.className = 'spinner';
@@ -49,34 +81,38 @@ function showStatus(el, type, text, isLoading = false) {
   el.classList.remove('hidden');
 }
 
-function showDownloadSuccessWithPrompt() {
+function showDownloadSuccessWithExtract() {
   downloadStatus.className = 'status success';
-  downloadStatus.textContent = '';
+  downloadStatus.innerHTML = '';
 
   const message = document.createElement('div');
-  message.innerHTML = '<strong>Download started!</strong><br>Check your Downloads folder.';
+  message.innerHTML = '<strong>✓ Download complete!</strong><br>Video saved to your Downloads folder.';
   downloadStatus.appendChild(message);
 
   const promptText = document.createElement('div');
-  promptText.style.marginTop = '12px';
+  promptText.style.marginTop = '16px';
   promptText.style.fontSize = '14px';
-  promptText.textContent = 'Want to extract frames from the video?';
+  promptText.style.opacity = '0.9';
+  promptText.innerHTML = 'Ready to extract frames from this video?';
   downloadStatus.appendChild(promptText);
 
   const btn = document.createElement('button');
   btn.className = 'btn-primary';
-  btn.style.marginTop = '10px';
-  btn.style.padding = '8px 16px';
-  btn.style.fontSize = '14px';
-  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>Extract Frames';
+  btn.style.marginTop = '12px';
+  btn.style.padding = '10px 20px';
+  btn.style.fontSize = '15px';
+  btn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <line x1="3" y1="9" x2="21" y2="9"/>
+      <line x1="9" y1="21" x2="9" y2="9"/>
+    </svg>
+    Extract Frames Automatically`;
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
-    const extractTab = document.querySelector('.tab[data-tab="extract"]');
-    extractTab.classList.add('active');
-    extractTab.setAttribute('aria-selected', 'true');
-    document.getElementById('tab-extract').classList.remove('hidden');
-    document.getElementById('video-upload').focus();
+    // Switch to extract tab with auto-loaded video
+    switchTab('extract');
+    // The extract tab will check for the downloaded video
+    setTimeout(() => loadDownloadedVideoIntoExtract(), 200);
   });
   downloadStatus.appendChild(btn);
 
@@ -97,7 +133,7 @@ downloadBtn.addEventListener('click', async () => {
   }
 
   downloadBtn.disabled = true;
-  showStatus(downloadStatus, 'loading', 'Fetching video… this may take a few seconds.', true);
+  showStatus(downloadStatus, 'loading', 'Fetching video info…', true);
 
   try {
     const res = await fetch('/api/download', {
@@ -110,23 +146,31 @@ downloadBtn.addEventListener('click', async () => {
     if (!res.ok) {
       showStatus(downloadStatus, 'error', data.error || 'Something went wrong.');
     } else {
-      // Fetch the video and force download via blob (avoids browser preview)
+      // Fetch the video and force download via blob
       showStatus(downloadStatus, 'loading', 'Downloading video…', true);
       try {
         const videoRes = await fetch(data.downloadUrl, { referrerPolicy: 'no-referrer' });
         if (!videoRes.ok) throw new Error('Failed to fetch video');
-        const blob = await videoRes.blob();
-        const blobUrl = URL.createObjectURL(blob);
+
+        // Store the blob for seamless extraction
+        downloadedVideoBlob = await videoRes.blob();
+        downloadedVideoName = `${data.title || 'tiktok-video'}.mp4`;
+
+        // Create download
+        const blobUrl = URL.createObjectURL(downloadedVideoBlob);
         const a = document.createElement('a');
         a.href = blobUrl;
-        a.download = `${data.title || 'tiktok-video'}.mp4`;
+        a.download = downloadedVideoName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
-        showDownloadSuccessWithPrompt();
+
+        // Clean up object URL after a delay
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+        showDownloadSuccessWithExtract();
       } catch (fetchErr) {
-        // Fallback: open in new tab if CORS blocks the fetch
+        // Fallback: open in new tab
         const a = document.createElement('a');
         a.href = data.downloadUrl;
         a.target = '_blank';
@@ -134,7 +178,7 @@ downloadBtn.addEventListener('click', async () => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        showDownloadSuccessWithPrompt();
+        showStatus(downloadStatus, 'success', 'Video opened in new tab. Right-click to save, then upload here to extract frames.');
       }
     }
   } catch (err) {
@@ -144,7 +188,7 @@ downloadBtn.addEventListener('click', async () => {
   }
 });
 
-// --- Extract Frames Tab (fully client-side — no server required) ---
+// --- Extract Frames Tab ---
 const extractBtn = document.getElementById('extract-btn');
 const videoUpload = document.getElementById('video-upload');
 const fileLabelText = document.getElementById('file-label-text');
@@ -154,23 +198,52 @@ const intervalMsInput = document.getElementById('interval-ms');
 const extractStatus = document.getElementById('extract-status');
 const framesGrid = document.getElementById('frames-grid');
 
-// Enable drag & drop onto the upload area.
-// Also prevent the browser from navigating away when a file is dropped.
+// Auto-load downloaded video into extract tab
+function loadDownloadedVideoIntoExtract() {
+  if (!downloadedVideoBlob) {
+    showStatus(extractStatus, 'error', 'No video available. Please download a video first.');
+    return;
+  }
+
+  // Create a File from the Blob
+  const file = new File([downloadedVideoBlob], downloadedVideoName, { type: 'video/mp4' });
+
+  // Set it to the file input
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  videoUpload.files = dt.files;
+
+  // Update UI
+  fileLabelText.textContent = downloadedVideoName + ' (auto-loaded)';
+  fileDropLabel.classList.add('has-auto-file');
+  fileDropLabel.classList.add('has-file');
+
+  // Show success message
+  showStatus(extractStatus, 'success', 'Video automatically loaded! Click "Extract Frames" to proceed.');
+
+  // Scroll to the button
+  extractBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Enable drag & drop
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
   document.addEventListener(evt, (e) => e.preventDefault());
 });
+
 ['dragenter', 'dragover'].forEach(evt => {
   fileDropLabel.addEventListener(evt, (e) => {
     e.preventDefault();
     fileDropLabel.classList.add('dragging');
   });
 });
+
 ['dragleave', 'drop'].forEach(evt => {
   fileDropLabel.addEventListener(evt, (e) => {
     e.preventDefault();
     fileDropLabel.classList.remove('dragging');
   });
 });
+
 fileDropLabel.addEventListener('drop', (e) => {
   const file = e.dataTransfer?.files?.[0];
   if (!file) return;
@@ -178,6 +251,10 @@ fileDropLabel.addEventListener('drop', (e) => {
     showStatus(extractStatus, 'error', 'Please drop a video file.');
     return;
   }
+
+  // Clear auto-file styling when user drops a new file
+  fileDropLabel.classList.remove('has-auto-file');
+
   const dt = new DataTransfer();
   dt.items.add(file);
   videoUpload.files = dt.files;
@@ -189,22 +266,30 @@ videoUpload.addEventListener('change', () => {
   if (file) {
     fileLabelText.textContent = file.name;
     fileDropLabel.classList.add('has-file');
+    // Remove auto-file indicator if user manually selects
+    if (file.name !== downloadedVideoName) {
+      fileDropLabel.classList.remove('has-auto-file');
+    }
   } else {
     fileLabelText.textContent = 'Click to choose a video file';
     fileDropLabel.classList.remove('has-file');
+    fileDropLabel.classList.remove('has-auto-file');
   }
 });
 
-// Seek a video element to a given time and resolve when the frame is ready.
+// Seek a video element to a given time
 function seekTo(video, timeS) {
   return new Promise(resolve => {
-    const onSeeked = () => { video.removeEventListener('seeked', onSeeked); resolve(); };
+    const onSeeked = () => {
+      video.removeEventListener('seeked', onSeeked);
+      resolve();
+    };
     video.addEventListener('seeked', onSeeked);
     video.currentTime = timeS;
   });
 }
 
-// Extract frames purely in the browser using <video> + <canvas>.
+// Extract frames
 function extractFramesInBrowser(file, frameCount, intervalMs) {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
@@ -261,7 +346,7 @@ extractBtn.addEventListener('click', async () => {
     if (!frames.length) {
       showStatus(extractStatus, 'error', 'No frames extracted — video may be shorter than the interval.');
     } else {
-      showStatus(extractStatus, 'success', `Extracted ${frames.length} frame${frames.length !== 1 ? 's' : ''}.`);
+      showStatus(extractStatus, 'success', `✓ Extracted ${frames.length} frame${frames.length !== 1 ? 's' : ''}`);
       renderFrames(frames);
     }
   } catch (err) {
@@ -276,6 +361,8 @@ function renderFrames(urls) {
   urls.forEach((url, i) => {
     const item = document.createElement('div');
     item.className = 'frame-item';
+    item.style.animationDelay = `${i * 0.05}s`;
+    item.style.animation = 'fadeIn 0.4s ease forwards';
 
     const img = document.createElement('img');
     img.src = url;
@@ -294,4 +381,10 @@ function renderFrames(urls) {
     framesGrid.appendChild(item);
   });
   framesGrid.classList.remove('hidden');
+}
+
+// Check for URL param to auto-switch tabs
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('tab') === 'extract') {
+  switchTab('extract');
 }
