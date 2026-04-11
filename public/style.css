@@ -1007,6 +1007,136 @@ html {
   color: var(--accent);
 }
 
+/* ── Buy Me a Coffee Section ── */
+.bmc-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.bmc-divider {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.bmc-divider::before,
+.bmc-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.bmc-divider-text {
+  padding: 0 12px;
+  font-size: 0.85rem;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.bmc-text {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+
+.bmc-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #FFDD00 0%, #FFC800 100%);
+  color: #000;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(255, 221, 0, 0.3);
+}
+
+.bmc-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 221, 0, 0.4);
+}
+
+.bmc-button:active {
+  transform: scale(0.98);
+}
+
+.bmc-button svg {
+  fill: #000;
+}
+
+/* Floating Buy Me a Coffee Button */
+.bmc-floating {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #FFDD00 0%, #FFC800 100%);
+  color: #000;
+  text-decoration: none;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(255, 221, 0, 0.4);
+  transition: transform 0.3s, box-shadow 0.3s, padding 0.3s;
+  animation: bmcSlideIn 0.6s ease 1s backwards;
+}
+
+@keyframes bmcSlideIn {
+  from {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.bmc-floating:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(255, 221, 0, 0.5);
+  padding: 14px 28px;
+}
+
+.bmc-floating svg {
+  flex-shrink: 0;
+  fill: #000;
+}
+
+.bmc-floating-text {
+  white-space: nowrap;
+}
+
+/* Hide floating button text on small screens */
+@media (max-width: 480px) {
+  .bmc-floating {
+    padding: 14px;
+    border-radius: 50%;
+  }
+
+  .bmc-floating:hover {
+    padding: 14px 20px;
+    border-radius: 50px;
+  }
+
+  .bmc-floating-text {
+    display: none;
+  }
+
+  .bmc-floating:hover .bmc-floating-text {
+    display: block;
+  }
+}
+
 /* ── Legal Footer ── */
 .legal-footer {
   margin-top: 60px;
