@@ -90,7 +90,21 @@ app.get('/favicon.ico', (_req, res) => {
   );
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '7d',
+  etag: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      return;
+    }
+    if (/\.(css|js|svg|png|jpg|jpeg|webp|woff2?)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+      return;
+    }
+    res.setHeader('Cache-Control', 'public, max-age=604800');
+  },
+}));
 
 const ALLOWED_VIDEO_MIMES = new Set([
   'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',

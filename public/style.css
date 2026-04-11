@@ -4,6 +4,7 @@
 /* ── Tokens ── */
 :root {
   --accent:        #fe2c55;
+  --accent-strong: #bc1138;
   --accent-dim:    rgba(254, 44, 85, 0.12);
   --accent-hover:  #e0193e;
 
@@ -14,8 +15,8 @@
   --border:        rgba(0,0,0,0.08);
   --border-strong: rgba(0,0,0,0.14);
   --text:          #0c0a09;
-  --text-2:        #6b6560;
-  --text-3:        #9e9892;
+  --text-2:        #4f4a45;
+  --text-3:        #6a645f;
   --input-bg:      #ffffff;
   --shadow-sm:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md:     0 4px 16px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
@@ -31,8 +32,9 @@
   --border:        rgba(255,255,255,0.06);
   --border-strong: rgba(255,255,255,0.10);
   --text:          #f0ede8;
-  --text-2:        #888480;
-  --text-3:        #555250;
+  --text-2:        #c7c2bd;
+  --text-3:        #a6a09a;
+  --accent-strong: #ff6f93;
   --input-bg:      #161616;
   --shadow-sm:     0 1px 3px rgba(0,0,0,0.4);
   --shadow-md:     0 4px 24px rgba(0,0,0,0.5);
@@ -85,6 +87,7 @@ body {
   padding: 12px 20px;
   box-shadow: 0 2px 12px rgba(254,44,85,0.3);
   animation: slideDown 0.4s ease;
+  will-change: transform, opacity;
 }
 
 @keyframes slideDown {
@@ -132,11 +135,6 @@ body {
   background: rgba(255,255,255,0.3);
 }
 
-/* Adjust body padding when banner is visible */
-body:has(.bookmark-banner:not(.hidden)) {
-  padding-top: 100px;
-}
-
 /* ── Header ── */
 header { margin-bottom: 52px; }
 
@@ -162,12 +160,12 @@ header { margin-bottom: 52px; }
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 15px rgba(254,44,85,0.35);
-  animation: logoPulse 3s ease-in-out infinite;
+  animation: logoFloat 3.2s ease-in-out infinite;
 }
 
-@keyframes logoPulse {
-  0%, 100% { box-shadow: 0 4px 15px rgba(254,44,85,0.35); }
-  50% { box-shadow: 0 6px 25px rgba(254,44,85,0.5); }
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
 }
 
 .logo-letter {
@@ -1230,7 +1228,7 @@ html {
 }
 
 .legal-notice p strong {
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .legal-links {
@@ -1261,6 +1259,7 @@ html {
 
 .legal-links .copyright,
 .legal-links .affiliation {
+  color: var(--text-2);
   white-space: nowrap;
 }
 
