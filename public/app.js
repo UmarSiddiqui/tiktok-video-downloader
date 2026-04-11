@@ -49,6 +49,42 @@ function showStatus(el, type, text, isLoading = false) {
   el.classList.remove('hidden');
 }
 
+function showDownloadSuccessWithPrompt() {
+  downloadStatus.className = 'status success';
+  downloadStatus.textContent = '';
+
+  const message = document.createElement('div');
+  message.innerHTML = '<strong>Download started!</strong><br>Check your Downloads folder.';
+  downloadStatus.appendChild(message);
+
+  const promptText = document.createElement('div');
+  promptText.style.marginTop = '12px';
+  promptText.style.fontSize = '14px';
+  promptText.textContent = 'Want to extract frames from the video?';
+  downloadStatus.appendChild(promptText);
+
+  const btn = document.createElement('button');
+  btn.className = 'btn-primary';
+  btn.style.marginTop = '10px';
+  btn.style.padding = '8px 16px';
+  btn.style.fontSize = '14px';
+  btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>Extract Frames';
+  btn.addEventListener('click', () => {
+    // Switch to Extract tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
+    const extractTab = document.querySelector('.tab[data-tab="extract"]');
+    extractTab.classList.add('active');
+    extractTab.setAttribute('aria-selected', 'true');
+    document.getElementById('tab-extract').classList.remove('hidden');
+    // Focus on file input
+    document.getElementById('video-upload').focus();
+  });
+  downloadStatus.appendChild(btn);
+
+  downloadStatus.classList.remove('hidden');
+}
+
 const TIKTOK_URL_RE = /^https?:\/\/(www\.|vm\.|vt\.|m\.)?tiktok\.com\//;
 
 downloadBtn.addEventListener('click', async () => {
@@ -90,7 +126,7 @@ downloadBtn.addEventListener('click', async () => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
-        showStatus(downloadStatus, 'success', 'Download started — check your Downloads folder.');
+        showDownloadSuccessWithPrompt();
       } catch (fetchErr) {
         // Fallback: open in new tab if CORS blocks the fetch
         const a = document.createElement('a');
@@ -100,7 +136,7 @@ downloadBtn.addEventListener('click', async () => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        showStatus(downloadStatus, 'success', 'Opened in new tab — right-click to save.');
+        showDownloadSuccessWithPrompt();
       }
     }
   } catch (err) {
