@@ -1,8 +1,8 @@
 # Umazen TikTok Tools (Full Context)
 
-Canonical website: https://umazen.tools/
-Primary tool page: https://umazen.tools/
-Legal terms: https://umazen.tools/terms.html
+Canonical website: https://umazen-tiktok-tools.netlify.app/
+Primary tool page: https://umazen-tiktok-tools.netlify.app/
+Legal terms: https://umazen-tiktok-tools.netlify.app/terms.html
 
 ## What this product does
 Umazen TikTok Tools is a web application focused on two tasks:

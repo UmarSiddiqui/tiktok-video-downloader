@@ -3,9 +3,9 @@
 > Free web app to download TikTok videos (no watermark where available) and extract still frames.
 
 ## Canonical URLs
-- https://umazen.tools/
-- https://umazen.tools/terms.html
-- https://umazen.tools/llms-full.txt
+- https://umazen-tiktok-tools.netlify.app/
+- https://umazen-tiktok-tools.netlify.app/terms.html
+- https://umazen-tiktok-tools.netlify.app/llms-full.txt
 
 ## Product Summary
 Umazen TikTok Tools is a browser-based utility for:
@@ -24,4 +24,4 @@ Umazen TikTok Tools is a browser-based utility for:
 - Mobile and desktop compatible UI
 
 ## Support
-- Terms: https://umazen.tools/terms.html
+- Terms: https://umazen-tiktok-tools.netlify.app/terms.html

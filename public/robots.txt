@@ -5,4 +5,4 @@ Allow: /
 Disallow: /api/
 Disallow: /tmp/
 
-Sitemap: https://umazen.tools/sitemap.xml
+Sitemap: https://umazen-tiktok-tools.netlify.app/sitemap.xml
