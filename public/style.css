@@ -1124,6 +1124,32 @@ header {
   margin-bottom: 20px;
 }
 
+/* ── Smartlink ── */
+.smartlink-section {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.smartlink-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--accent-2-dim);
+  border: 1px solid var(--accent-2);
+  border-radius: var(--radius-md);
+  color: var(--accent-2);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.smartlink-btn:hover {
+  background: rgba(0,229,255,0.18);
+  box-shadow: 0 0 16px rgba(0,229,255,0.2);
+}
+
 /* ── Buy Me a Coffee ── */
 .bmc-section {
   margin-top: 26px;
