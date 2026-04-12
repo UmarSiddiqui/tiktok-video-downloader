@@ -862,6 +862,15 @@ header {
   padding-left: 4px;
 }
 
+/* ── Ad Banner ── */
+.ad-banner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 28px 0;
+  overflow: hidden;
+}
+
 /* ── SEO Content Sections ── */
 .seo-content {
   margin-top: 28px;
