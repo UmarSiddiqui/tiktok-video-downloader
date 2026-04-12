@@ -862,60 +862,6 @@ header {
   padding-left: 4px;
 }
 
-/* ── Ad Banners ── */
-.ad-banner {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 28px 0;
-  overflow: hidden;
-}
-
-/* 160x300 — centered on mobile, hidden below 200px wide screens */
-.ad-banner-side {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 24px 0;
-  overflow: hidden;
-}
-
-/* Native banner — full width, natural content spacing */
-.ad-native {
-  margin: 28px 0;
-  overflow: hidden;
-}
-
-/* 320x50 sticky mobile bar */
-.ad-mobile-sticky {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  overflow: hidden;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
-  padding: 4px 0;
-}
-
-@media (max-width: 600px) {
-  .ad-mobile-sticky {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  /* Push footer content above the sticky bar */
-  body {
-    padding-bottom: 140px;
-  }
-  /* Hide the large 468x60 on mobile — too wide */
-  .ad-banner {
-    display: none;
-  }
-}
-
 /* ── SEO Content Sections ── */
 .seo-content {
   margin-top: 28px;
@@ -1122,32 +1068,6 @@ header {
 .ad-footer {
   margin-top: 30px;
   margin-bottom: 20px;
-}
-
-/* ── Smartlink ── */
-.smartlink-section {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.smartlink-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  background: var(--accent-2-dim);
-  border: 1px solid var(--accent-2);
-  border-radius: var(--radius-md);
-  color: var(--accent-2);
-  text-decoration: none;
-  font-size: 0.88rem;
-  font-weight: 600;
-  transition: background 0.2s, box-shadow 0.2s;
-}
-
-.smartlink-btn:hover {
-  background: rgba(0,229,255,0.18);
-  box-shadow: 0 0 16px rgba(0,229,255,0.2);
 }
 
 /* ── Buy Me a Coffee ── */
