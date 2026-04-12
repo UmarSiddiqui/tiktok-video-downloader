@@ -226,6 +226,34 @@ header {
   justify-content: space-between;
   margin-top: 50px;
   margin-bottom: 44px;
+  gap: 16px;
+}
+
+/* ── Site Navigation ── */
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.site-nav-link {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color 0.2s, background 0.2s;
+}
+
+.site-nav-link:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+@media (max-width: 480px) {
+  .site-nav { display: none; }
 }
 
 .brand-logo {
